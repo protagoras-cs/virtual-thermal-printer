@@ -2,6 +2,11 @@
 /packages/*/node_modules/
 /.vscode/
 **/dist/
+**/bin/
+**/obj/
+**/publish/
+**/*.csproj.user
+desktop-app/appsettings.json
 packages/*/sea-bundle.cjs
 packages/*/sea-config.json
 packages/*/sea-prep.blob

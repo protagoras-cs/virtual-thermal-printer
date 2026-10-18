@@ -38,8 +38,8 @@ console.log(`App version: ${appVersion}`)
 const { values: flags } = parseArgs({
 	args: process.argv.slice(2),
 	options: {
-		http: { type: 'string', default: '80' },
-		socket: { type: 'string', default: '9100' },
+		http: { type: 'string', default: '8555' },
+		socket: { type: 'string', default: '9101' },
 	},
 })
 

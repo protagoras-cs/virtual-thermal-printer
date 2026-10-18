@@ -23,6 +23,9 @@ if (part !== 'patch' && part !== 'minor' && part !== 'major') {
 
 const pkgPath = join(__dirname, '..', 'package.json')
 const pkgJson = JSON.parse(await readFile(pkgPath, 'utf-8'))
+const repoRoot = join(__dirname, '../../..')
+const lockPath = join(repoRoot, 'package-lock.json')
+const lockJson = JSON.parse(await readFile(lockPath, 'utf-8'))
 
 const [major, minor, patch] = (pkgJson.version as string).split('.').map(Number)
 
@@ -42,11 +45,22 @@ switch (part) {
 
 pkgJson.version = newVersion
 await writeFile(pkgPath, JSON.stringify(pkgJson, null, '\t') + '\n')
+if (lockJson.packages?.['packages/virtual-thermal-printer']) {
+	lockJson.packages['packages/virtual-thermal-printer'].version = newVersion
+}
+await writeFile(lockPath, JSON.stringify(lockJson, null, '\t') + '\n')
 
 console.log(`Version bumped to ${newVersion}`)
 
-spawnSync('git', ['add', 'package.json'], { stdio: 'inherit' })
-spawnSync('git', ['commit', '-m', `v${newVersion}`], { stdio: 'inherit' })
-spawnSync('git', ['tag', '-a', `v${newVersion}`, '-m', `Version ${newVersion}`], { stdio: 'inherit' })
+function runGit(args: string[]) {
+	const result = spawnSync('git', args, { cwd: repoRoot, stdio: 'inherit' })
+	if (result.status !== 0) {
+		process.exit(result.status ?? 1)
+	}
+}
+
+runGit(['add', '--', 'packages/virtual-thermal-printer/package.json', 'package-lock.json'])
+runGit(['commit', '-m', `v${newVersion}`])
+runGit(['tag', '-a', `v${newVersion}`, '-m', `Version ${newVersion}`])
 
 console.log(`Created git tag v${newVersion}`)

@@ -37,13 +37,30 @@ npm install
 npm run dev
 ```
 
-The server starts at `http://localhost:8000` and listens for raw ESC/POS on TCP port `9100`.
+The server starts at `http://localhost:8555` and listens for raw ESC/POS on TCP port `9101`.
 
 Both ports can be overridden:
 
 ```bash
-./virtual-thermal-printer --http 8080 --socket 9100
+./virtual-thermal-printer --http 8555 --socket 9101
 ```
+
+## Windows Desktop App
+
+The desktop companion provides an embedded, scrollable print view, starts and
+stops the local printer server automatically, and prompts for alternative ports
+when the configured ports are already in use. The default ports are HTTP `8555`
+and TCP `9101`.
+
+For a release, download `VirtualThermalPrinterDesktop-win-x64.zip`, extract the
+entire archive, and run `VirtualThermalPrinterDesktop.exe`. Keep the bundled
+`virtual-thermal-printer-windows.exe` beside it; the desktop app starts this
+server executable. Microsoft Edge WebView2 Runtime must be available on Windows.
+
+To run from source, install Node.js 22+ and the .NET 8 SDK, then run `npm ci`,
+`npm run build`, and `dotnet run --project desktop-app/VirtualThermalPrinterDesktop.csproj`
+from the repository root. The source-mode desktop app uses the local Node.js
+installation and the repository's installed npm dependencies.
 
 ## Sending Print Commands
 
@@ -62,15 +79,15 @@ Both ports can be overridden:
 curl -X POST \
   -H "Content-Type: text/xml" \
   --data @packages/virtual-thermal-printer/fixtures/request1.xml \
-  http://localhost:8000/cgi-bin/epos/service.cgi
+  http://localhost:8555/cgi-bin/epos/service.cgi
 ```
 
 ### ESC/POS (TCP Socket)
 
-Connect to port `9100` and send raw ESC/POS bytes, e.g. via `netcat`:
+Connect to port `9101` and send raw ESC/POS bytes, e.g. via `netcat`:
 
 ```bash
-echo -e "\x1b\x40Hello\x0a" | nc localhost 9100
+echo -e "\x1b\x40Hello\x0a" | nc localhost 9101
 ```
 
 ## Docker
@@ -84,31 +101,34 @@ Or manually:
 
 ```bash
 docker build -t virtual-thermal-printer .
-docker run --rm -p 8000:80 -p 9100:9100 virtual-thermal-printer
+docker run --rm -p 8555:8555 -p 9101:9101 virtual-thermal-printer
 ```
 
-The web UI is available at `http://localhost:8000` and the TCP socket on port `9100`.
+The web UI is available at `http://localhost:8555` and the TCP socket on port `9101`.
 
 ## Releasing
 
-1. Bump the version and create a git tag:
+1. Bump the patch version, update the lockfile, and create a commit and tag:
    ```bash
-   npm run version:bump              # patch (0.0.x)
-   npm run version:bump -- --part=minor  # minor (0.x.0)
-   npm run version:bump -- --part=major  # major (x.0.0)
+   npm run version:bump
+   npm run version:bump -- --part=minor
+   npm run version:bump -- --part=major
    ```
-2. Push the tag to trigger the release workflow:
+2. Push the branch and the new tag to your fork (replace `<fork-remote>` with its remote name):
    ```bash
-   git push && git push --tags
+   git push <fork-remote> main
+   git push <fork-remote> v0.1.1
    ```
 
-GitHub Actions then builds platform binaries (Linux, macOS, Windows) and a Docker image, and creates a GitHub Release.
+Pushing a `v*` tag triggers GitHub Actions to build Linux, macOS, and Windows
+server binaries, publish the Windows desktop app bundle, and create a GitHub
+Release. The desktop ZIP contains the app and its bundled server executable.
 
 ## Scripts
 
 | Command | Description |
 |---|---|
-| `npm run dev` | Start dev server with hot reload on port 8000 |
+| `npm run dev` | Start dev server with hot reload on port 8555 |
 | `npm run build` | Build `escpos-decoder` and the frontend |
 | `npm test` | Run all tests across all packages |
 | `npm run docker:build` | Build Docker image |

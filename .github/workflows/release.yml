@@ -30,6 +30,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Windows Rollup binary
+        if: runner.os == 'Windows'
+        run: npm install --no-save --package-lock=false @rollup/rollup-win32-x64-msvc@4.60.2
+
       - name: Build
         run: npm run build
 
@@ -72,6 +76,23 @@ jobs:
           name: ${{ matrix.binary }}
           path: packages/virtual-thermal-printer/${{ matrix.binary }}
 
+      - name: Set up .NET
+        if: runner.os == 'Windows'
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish Windows desktop app
+        if: runner.os == 'Windows'
+        run: dotnet publish desktop-app/VirtualThermalPrinterDesktop.csproj -c Release -r win-x64 --self-contained true -o desktop-app/publish
+
+      - name: Upload Windows desktop app
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-app-publish
+          path: desktop-app/publish/
+
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
@@ -82,10 +103,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: Download server binaries
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: server-artifacts
+
+      - name: Download Windows desktop app
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-app-publish
+          path: desktop-app-publish
+
+      - name: Package Windows desktop app
+        run: |
+          mkdir -p desktop-bundle artifacts
+          cp -R desktop-app-publish/. desktop-bundle/
+          cp server-artifacts/virtual-thermal-printer-windows.exe/virtual-thermal-printer-windows.exe desktop-bundle/
+          zip -r artifacts/VirtualThermalPrinterDesktop-win-x64.zip desktop-bundle
 
       - name: Create release
         run: |
@@ -93,6 +127,7 @@ jobs:
             --repo ${{ github.repository }} \
             --title "Release ${{ github.ref_name }}" \
             --generate-notes \
-            artifacts/*/*
+            server-artifacts/*/* \
+            artifacts/VirtualThermalPrinterDesktop-win-x64.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
